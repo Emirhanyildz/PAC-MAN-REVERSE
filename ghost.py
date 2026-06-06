@@ -1,7 +1,6 @@
 import pygame
 import random
 
-
 class Hayalet(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
@@ -45,12 +44,17 @@ class Hayalet(pygame.sprite.Sprite):
                     olasi_hamleler.append((yeni_mesafe, y_x, y_y))
 
         if olasi_hamleler:
-            olasi_hamleler.sort(reverse=True, key=lambda x: x[0])
-            return (olasi_hamleler[0][1], olasi_hamleler[0][2])
+            # TIE-BREAKING (EŞİTLİK BOZMA) - ZAR ATMA (RNG)
+            en_iyi_mesafe = max(olasi_hamleler, key=lambda x: x[0])[0]
+            # Bu en iyi mesafeyi veren tüm yönleri bir listeye al (Eşitlik durumu olabilir)
+            en_iyi_hamleler = [h for h in olasi_hamleler if h[0] == en_iyi_mesafe]
+            
+            # Eğer birden fazla eşit kaçış yolu varsa rastgele birini seçerek öngörülemezliği artır
+            secilen_hamle = random.choice(en_iyi_hamleler) 
+            return (secilen_hamle[1], secilen_hamle[2])
             
         # 2. KURAL: Eğer çıkmaz sokaktaysa ve başka yol yoksa mecburen geri döner
         return (ters_x, ters_y)
-
 
     def bfs_ile_hedef_bul(self, harita, baslangic_satir, baslangic_sutun):
         kuyruk = [(baslangic_satir, baslangic_sutun, [])]
@@ -84,8 +88,6 @@ class Hayalet(pygame.sprite.Sprite):
             for d_satir, d_sutun, y_x, y_y in yonler:
                 
                 # ----- BFS İÇİN 180 DERECE YASAĞI -----
-                # Eğer algoritma henüz İLK adımını atıyorsa (len(yol) == 0)
-                # ve bu adım U-dönüşü ise, o yöne bakmayı reddet!
                 if len(yol) == 0 and y_x == ters_x and y_y == ters_y:
                     continue 
 
@@ -102,9 +104,14 @@ class Hayalet(pygame.sprite.Sprite):
 
         return None
     
-    
-    def update(self, duvarlar, yemler, hayaletler, harita, oyuncu):
+    # update metoduna ses_yoneticisi parametresi eklendi
+    def update(self, duvarlar, yemler, hayaletler, harita, oyuncu, ses_yoneticisi=None):
         yenen_yemler = pygame.sprite.spritecollide(self, yemler, True)
+        
+        # SES KANCASI (Event Hook): Yem yenildiği anda ses tetikle
+        if yenen_yemler and ses_yoneticisi:
+            ses_yoneticisi.yem_yendi_cal()
+            
         for yem in yenen_yemler:
             satir = yem.rect.y // 32
             sutun = yem.rect.x // 32
@@ -119,22 +126,33 @@ class Hayalet(pygame.sprite.Sprite):
             oyuncu_sutun = oyuncu.rect.x // 32
             oyuncu_satir = oyuncu.rect.y // 32
 
-            mesafe = abs(bulundugu_sutun - oyuncu_sutun) + abs(bulundugu_satir - oyuncu_satir)
+            # MANHATTAN MESAFESİ DELTA (FARK) HESAPLARI
+            delta_x = oyuncu_sutun - bulundugu_sutun
+            delta_y = oyuncu_satir - bulundugu_satir
+            mesafe = abs(delta_x) + abs(delta_y)
 
-            if mesafe <= 5:
+            # --- FIELD OF VIEW (GÖRÜŞ ALANI) MEKANİZMASI ---
+            # Varsayılan sezgi eşiği (Oyuncu arkadaysa veya yandaysa)
+            tehlike_esigi = 3 
+            
+            # Eğer hayaletin hareket yönü ile Pac-Man'in bulunduğu yön aynıysa (Göz göze geldilerse)
+            if (self.yon_x > 0 and delta_x > 0) or \
+               (self.yon_x < 0 and delta_x < 0) or \
+               (self.yon_y > 0 and delta_y > 0) or \
+               (self.yon_y < 0 and delta_y < 0):
+                tehlike_esigi = 6 # Görüş mesafesini artır (Uzaklardan fark et)
+
+            if mesafe <= tehlike_esigi:
                 self.kacis_modu = True 
             elif mesafe >= 9:
                 self.kacis_modu = False 
 
-            # ----- DÜZELTİLMİŞ 180 DERECE KURALI -----
-            # SADECE sakinken paniklediğinde anında geri dönsün!
-            # (Sakinleştiğinde dönmesine gerek yok, yoluna devam etsin)
+            # DÜZELTİLMİŞ 180 DERECE KURALI
             if self.kacis_modu and not self.eski_mod:
                 self.yon_x = -self.yon_x
                 self.yon_y = -self.yon_y
                 self.eski_mod = True
                 
-            # DİKKAT: Yapay zeka kararları artık bu 'else' bloğunun İÇİNDE!
             else:
                 self.eski_mod = self.kacis_modu
                 
@@ -147,7 +165,6 @@ class Hayalet(pygame.sprite.Sprite):
                     self.yon_x = hedef_yon[0]
                     self.yon_y = hedef_yon[1]
                 else:
-                    # EĞER HEDEF YOKSA VEYA YEM BİTTİYSE: Eski rastgele radar devriyesi
                     gecerli_yonler = []
                     ters_x = -self.yon_x
                     ters_y = -self.yon_y
@@ -161,11 +178,9 @@ class Hayalet(pygame.sprite.Sprite):
 
                     for d_satir, d_sutun, y_x, y_y in olasi_yonler:
                         if harita[bulundugu_satir + d_satir][bulundugu_sutun + d_sutun] != 1:
-                            # Geri dönüş YÖNÜ DEĞİLSE listeye ekle
                             if y_x != ters_x or y_y != ters_y: 
                                 gecerli_yonler.append((y_x, y_y))
 
-                    # Eğer bir çıkmaz sokağa girdiyse ve TEK ÇARE geri dönmekse listeye ekle
                     if len(gecerli_yonler) == 0:
                         gecerli_yonler.append((ters_x, ters_y))
 
@@ -179,8 +194,6 @@ class Hayalet(pygame.sprite.Sprite):
         self.rect.y += self.yon_y
 
         # 3. DUVAR ÇARPIŞMALARI
-        # (Önceki yazdığın duvar sekme kodları aynı kalacak, onları silme!)
-        
         carpisilan_duvarlar = pygame.sprite.spritecollide(self, duvarlar, False)
         for duvar in carpisilan_duvarlar:
             if self.yon_x > 0: 

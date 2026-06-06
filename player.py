@@ -18,11 +18,15 @@ class Player(pygame.sprite.Sprite):
         self.istenen_x = 0
         self.istenen_y = 0
 
-    def update(self, duvarlar, yemler, hayaletler, harita, oyuncu=None):
+    # update metoduna ses_yoneticisi parametresi eklendi
+    def update(self, duvarlar, yemler, hayaletler, harita, oyuncu=None, ses_yoneticisi=None):
         # ---------------- HAYALET AVLAMA ----------------
         avlanan_hayaletler = pygame.sprite.spritecollide(self, hayaletler, True)
         if avlanan_hayaletler:
             print("Av başarılı! Bir hayalet yok edildi.")
+            # SES KANCASI: Hayalet avlandığında çal
+            if ses_yoneticisi:
+                ses_yoneticisi.av_basarili_cal()
             
         tuslar = pygame.key.get_pressed()
         
