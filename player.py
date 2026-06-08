@@ -10,7 +10,7 @@ class Player(pygame.sprite.Sprite):
         
         self.rect.x = baslangic_x
         self.rect.y = baslangic_y
-        self.hiz = 4
+        self.hiz = 3
         
         # SÜREKLİ HAREKET VE HAFIZA DEĞİŞKENLERİ
         self.yon_x = 0
