@@ -5,14 +5,12 @@ import heapq
 TILE_SIZE = 40
 
 class Hayalet(pygame.sprite.Sprite):
-    # Sınıf seviyesinde bir sayaç tutarak haritadaki hayaletlerin sırayla farklı kişilikler/renkler almasını sağlıyoruz
     _kisilik_sirasi = ["Kirmizi", "Pembe", "Mavi", "Turuncu"]
     _sayac = 0
 
     def __init__(self, x, y, kisilik=None):
         super().__init__()
         
-        # Eğer dışarıdan kişilik belirtilmediyse (main.py'yi bozmamak için) sırayla otomatik ata
         if kisilik is None:
             self.kisilik = Hayalet._kisilik_sirasi[Hayalet._sayac % 4]
             Hayalet._sayac += 1
@@ -21,15 +19,14 @@ class Hayalet(pygame.sprite.Sprite):
 
         self.image = pygame.Surface((TILE_SIZE, TILE_SIZE))
         
-        # Kişiliğe göre renk ataması (Orijinal Pac-Man renk paleti)
         if self.kisilik == "Kirmizi":
-            self.image.fill((255, 0, 0))      # Açgözlü (Blinky)
+            self.image.fill((255, 0, 0))
         elif self.kisilik == "Pembe":
-            self.image.fill((255, 184, 255))  # Stratejist (Pinky)
+            self.image.fill((255, 184, 255))
         elif self.kisilik == "Mavi":
-            self.image.fill((0, 255, 255))    # Paranoyak (Inky)
+            self.image.fill((0, 255, 255))
         elif self.kisilik == "Turuncu":
-            self.image.fill((255, 184, 82))   # Korkak (Clyde)
+            self.image.fill((255, 184, 82))
             
         self.rect = self.image.get_rect()
         self.rect.x = x
@@ -41,32 +38,25 @@ class Hayalet(pygame.sprite.Sprite):
         self.kacis_modu = False
         self.eski_mod = False 
         
-        # --- HAFIZA VE DURUM MAKİNESİ (STATE MACHINE) ---
-        self.hafizadaki_hedef = None  # Oyuncunun son görüldüğü koordinatlar
-        self.panik_sayaci = 0         # Kaçış süresi sayacı
-        self.MAX_PANIK = 120          # 2 saniye panik süresi (60 FPS'de)
+        self.hafizadaki_hedef = None
+        self.panik_sayaci = 0
+        self.MAX_PANIK = 120
         
-        self.durum = "SCATTER"        # Başlangıç durumu: Köşelere dağılma
+        self.durum = "SCATTER"
         self.durum_sayaci = 0
-        self.SCATTER_SURESI = 60 * 5  # 5 saniye köşelerinde beklesinler/dağılsınlar
-        self.FORAGE_SURESI = 60 * 15  # 15 saniye haritada aktif yem arasınlar
+        self.SCATTER_SURESI = 60 * 5
+        self.FORAGE_SURESI = 60 * 15
 
-        # Her kişiliğin kendine ait bir güvenli sığınak köşesi (Satır, Sütun) var
         self.scatter_hedefi = self.scatter_kosesi_belirle()
 
     def scatter_kosesi_belirle(self):
-        if self.kisilik == "Kirmizi":
-            return (1, 46)   # Sağ üst köşe
-        elif self.kisilik == "Pembe":
-            return (1, 1)    # Sol üst köşe
-        elif self.kisilik == "Mavi":
-            return (25, 46)  # Sağ alt köşe
-        elif self.kisilik == "Turuncu":
-            return (25, 1)   # Sol alt köşe
+        if self.kisilik == "Kirmizi": return (1, 46)
+        elif self.kisilik == "Pembe": return (1, 1)
+        elif self.kisilik == "Mavi": return (25, 46)
+        elif self.kisilik == "Turuncu": return (25, 1)
         return (1, 1)
 
     def update(self, duvarlar, yemler, hayaletler, harita, oyuncu, ses_yoneticisi=None):
-        # Yem yeme kontrolü
         yenen_yemler = pygame.sprite.spritecollide(self, yemler, True)
         
         if yenen_yemler and ses_yoneticisi:
@@ -75,27 +65,24 @@ class Hayalet(pygame.sprite.Sprite):
         for yem in yenen_yemler:
             satir = yem.rect.y // TILE_SIZE
             sutun = yem.rect.x // TILE_SIZE
-            harita[satir][sutun] = 4  # Yenilen yemi 4 yapıyoruz ki boş yol olsun, AI tekrar oraya gitmeye çalışmasın
+            harita[satir][sutun] = 4
 
-        # Durum zamanlayıcı güncellemesi (Scatter ile Forage arası geçiş)
         self.durum_sayaci += 1
         if self.durum == "SCATTER" and self.durum_sayaci >= self.SCATTER_SURESI:
             self.durum = "FORAGE"
             self.durum_sayaci = 0
-            self.yon_x, self.yon_y = -self.yon_x, -self.yon_y  # Mod değişince ani yön değişimi
+            self.yon_x, self.yon_y = -self.yon_x, -self.yon_y
         elif self.durum == "FORAGE" and self.durum_sayaci >= self.FORAGE_SURESI:
             self.durum = "SCATTER"
             self.durum_sayaci = 0
             self.yon_x, self.yon_y = -self.yon_x, -self.yon_y
 
-        # Panik ve hafıza sayacı eksiltme
         if self.panik_sayaci > 0:
             self.panik_sayaci -= 1
         else:
             self.hafizadaki_hedef = None
             self.kacis_modu = False
 
-        # KAVŞAK NOKTASI KONTROLÜ (Tam kareye oturduğunda karar ver)
         if self.rect.x % TILE_SIZE == 0 and self.rect.y % TILE_SIZE == 0:
             max_sutun = len(harita[0]) - 1
             max_satir = len(harita) - 1
@@ -110,44 +97,36 @@ class Hayalet(pygame.sprite.Sprite):
             delta_y = oyuncu_satir - bulundugu_satir
             mesafe = abs(delta_x) + abs(delta_y)
 
-            tehlike_esigi = 4
-            # Eğer oyuncu görüş alanındaysa algılama mesafesini genişlet
+            # Görüş Eşikleri Artırıldı
+            tehlike_esigi = 6
             if (self.yon_x > 0 and delta_x > 0) or (self.yon_x < 0 and delta_x < 0) or \
                (self.yon_y > 0 and delta_y > 0) or (self.yon_y < 0 and delta_y < 0):
-                tehlike_esigi = 8
+                tehlike_esigi = 10
 
-            # Oyuncuyu gördü mü?
             if mesafe <= tehlike_esigi:
                 self.kacis_modu = True
                 self.hafizadaki_hedef = (oyuncu_satir, oyuncu_sutun)
                 self.panik_sayaci = self.MAX_PANIK
 
-            # KARAR AŞAMASI (Yön Belirleme)
             hedef_yon = None
 
             if self.kacis_modu:
-                # Pac-Man'i gördüğünde A* algoritması ile kendi güvenli köşesine akıllıca kaçsın
                 hedef_satir, hedef_sutun = self.scatter_hedefi
-                hedef_yon = self.a_star_ile_rota_bul(harita, bulundugu_satir, bulundugu_sutun, hedef_satir, hedef_sutun)
+                hedef_yon = self.a_star_ile_rota_bul(harita, bulundugu_satir, bulundugu_sutun, hedef_satir, hedef_sutun, oyuncu_satir, oyuncu_sutun)
                 
-                # Eğer o an köşeye giden yol kapalıysa klasik Manhattan kaçışını kullan
                 if hedef_yon is None and self.hafizadaki_hedef:
                     t_satir, t_sutun = self.hafizadaki_hedef
                     hedef_yon = self.kacis_yonu_bul(harita, bulundugu_satir, bulundugu_sutun, t_satir, t_sutun)
             else:
-                # Sakin mod: İçinde bulunduğu duruma göre hareket et
                 if self.durum == "SCATTER":
                     hedef_satir, hedef_sutun = self.scatter_hedefi
-                    hedef_yon = self.a_star_ile_rota_bul(harita, bulundugu_satir, bulundugu_sutun, hedef_satir, hedef_sutun)
+                    hedef_yon = self.a_star_ile_rota_bul(harita, bulundugu_satir, bulundugu_sutun, hedef_satir, hedef_sutun, oyuncu_satir, oyuncu_sutun)
                 else: 
-                    # FORAGE modu (BFS ile haritadaki en yakın yemi ("0") arar)
-                    hedef_yon = self.bfs_ile_hedef_bul(harita, bulundugu_satir, bulundugu_sutun)
+                    hedef_yon = self.bfs_ile_hedef_bul(harita, bulundugu_satir, bulundugu_sutun, oyuncu_satir, oyuncu_sutun)
 
-            # Rotaları sisteme uygulama
             if hedef_yon is not None:
                 self.yon_x, self.yon_y = hedef_yon[0], hedef_yon[1]
             else:
-                # Acil durum planı: Sıkışırsa rastgele geçerli bir yöne dönsün
                 gecerli_yonler = []
                 ters_x, ters_y = -self.yon_x, -self.yon_y
                 olasi_yonler = [(0, 1, self.hiz, 0), (0, -1, -self.hiz, 0), (1, 0, 0, self.hiz), (-1, 0, 0, -self.hiz)]
@@ -165,7 +144,6 @@ class Hayalet(pygame.sprite.Sprite):
                 secilen_yon = random.choice(gecerli_yonler)
                 self.yon_x, self.yon_y = secilen_yon[0], secilen_yon[1]
 
-        # HAREKET VE ÇARPIŞMALAR
         self.rect.x += self.yon_x
         self.rect.y += self.yon_y
 
@@ -212,7 +190,7 @@ class Hayalet(pygame.sprite.Sprite):
             return (secilen_hamle[1], secilen_hamle[2])
         return (ters_x, ters_y)
 
-    def bfs_ile_hedef_bul(self, harita, baslangic_satir, baslangic_sutun):
+    def bfs_ile_hedef_bul(self, harita, baslangic_satir, baslangic_sutun, oyuncu_satir, oyuncu_sutun):
         kuyruk = [(baslangic_satir, baslangic_sutun, [])]
         ziyaret_edilenler = set([(baslangic_satir, baslangic_sutun)])
         yonler = [(0, 1, self.hiz, 0), (0, -1, -self.hiz, 0), (1, 0, 0, self.hiz), (-1, 0, 0, -self.hiz)]
@@ -231,7 +209,6 @@ class Hayalet(pygame.sprite.Sprite):
         while len(kuyruk) > 0:
             guncel_satir, guncel_sutun, yol = kuyruk.pop(0)
 
-            # map.json dosyandaki aktif yemlerin değeri 0'dır!
             if harita[guncel_satir][guncel_sutun] == 0:
                 if len(yol) > 0: return yol[0]
                 return None
@@ -241,6 +218,10 @@ class Hayalet(pygame.sprite.Sprite):
                 yeni_satir, yeni_sutun = guncel_satir + d_satir, guncel_sutun + d_sutun
 
                 if 0 <= yeni_satir < len(harita) and 0 <= yeni_sutun < len(harita[0]):
+                    # ÖLÜM BÖLGESİ (DEATH ZONE): Oyuncunun 2 kare yakınına girme!
+                    if abs(yeni_satir - oyuncu_satir) + abs(yeni_sutun - oyuncu_sutun) <= 2:
+                        continue
+
                     if harita[yeni_satir][yeni_sutun] != 1 and (yeni_satir, yeni_sutun) not in ziyaret_edilenler:
                         ziyaret_edilenler.add((yeni_satir, yeni_sutun))
                         yeni_yol = yol.copy()
@@ -248,7 +229,7 @@ class Hayalet(pygame.sprite.Sprite):
                         kuyruk.append((yeni_satir, yeni_sutun, yeni_yol))
         return None
 
-    def a_star_ile_rota_bul(self, harita, baslangic_satir, baslangic_sutun, hedef_satir, hedef_sutun):
+    def a_star_ile_rota_bul(self, harita, baslangic_satir, baslangic_sutun, hedef_satir, hedef_sutun, oyuncu_satir, oyuncu_sutun):
         kuyruk = []
         heapq.heappush(kuyruk, (0, (baslangic_satir, baslangic_sutun), []))
         ziyaret_edilenler = set([(baslangic_satir, baslangic_sutun)])
@@ -261,18 +242,22 @@ class Hayalet(pygame.sprite.Sprite):
                 if len(yol) > 0: return yol[0]
                 return None
 
-                for d_satir, d_sutun, y_x, y_y in yonler:
-                    yeni_satir, yeni_sutun = g_satir + d_satir, g_sutun + d_sutun
+            for d_satir, d_sutun, y_x, y_y in yonler:
+                yeni_satir, yeni_sutun = g_satir + d_satir, g_sutun + d_sutun
 
-                    if 0 <= yeni_satir < len(harita) and 0 <= yeni_sutun < len(harita[0]):
-                        if harita[yeni_satir][yeni_sutun] != 1 and (yeni_satir, yeni_sutun) not in ziyaret_edilenler:
-                            ziyaret_edilenler.add((yeni_satir, yeni_sutun))
-                            yeni_yol = yol.copy()
-                            yeni_yol.append((y_x, y_y))
-                            
-                            g_cost = len(yeni_yol)
-                            h_cost = abs(hedef_satir - yeni_satir) + abs(hedef_sutun - yeni_sutun)
-                            f_cost = g_cost + h_cost
-                            
-                            heapq.heappush(kuyruk, (f_cost, (yeni_satir, yeni_sutun), yeni_yol))
+                if 0 <= yeni_satir < len(harita) and 0 <= yeni_sutun < len(harita[0]):
+                    # ÖLÜM BÖLGESİ (DEATH ZONE): Kaçarken bile oyuncunun 2 kare yakınına girme!
+                    if abs(yeni_satir - oyuncu_satir) + abs(yeni_sutun - oyuncu_sutun) <= 2:
+                        continue
+
+                    if harita[yeni_satir][yeni_sutun] != 1 and (yeni_satir, yeni_sutun) not in ziyaret_edilenler:
+                        ziyaret_edilenler.add((yeni_satir, yeni_sutun))
+                        yeni_yol = yol.copy()
+                        yeni_yol.append((y_x, y_y))
+                        
+                        g_cost = len(yeni_yol)
+                        h_cost = abs(hedef_satir - yeni_satir) + abs(hedef_sutun - yeni_sutun)
+                        f_cost = g_cost + h_cost
+                        
+                        heapq.heappush(kuyruk, (f_cost, (yeni_satir, yeni_sutun), yeni_yol))
         return None
