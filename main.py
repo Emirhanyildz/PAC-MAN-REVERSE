@@ -10,7 +10,7 @@ saat = pygame.time.Clock()
 FPS = 60
 
 GENISLIK, YUKSEKLIK = 1920, 1080
-ekran = pygame.display.set_mode((GENISLIK, YUKSEKLIK))
+ekran = pygame.display.set_mode((GENISLIK, YUKSEKLIK), pygame.FULLSCREEN | pygame.SCALED)
 pygame.display.set_caption("Pac-Man Reverse")
 
 # --- YENİ EKLENEN KISIM: JSON HARİTA YÜKLEME ---
@@ -83,8 +83,8 @@ for satir_indeksi, satir in enumerate(seviye_haritasi):
 # -------- HARİTA DÖNGÜSÜ BİTTİ --------
 
 # Pac-Man'i yeni haritaya göre orta-alt güvenli bölgeye (Sütun 23, Satır 20) yerleştiriyoruz
-pacman_baslangic_x = 23 * TILE_SIZE
-pacman_baslangic_y = 20 * TILE_SIZE
+pacman_baslangic_x = 24 * TILE_SIZE
+pacman_baslangic_y = 22 * TILE_SIZE
 pacman = Player(pacman_baslangic_x, pacman_baslangic_y)
 tum_spriteler.add(pacman)
 
@@ -97,6 +97,10 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 calisiyor = False
+            # ESC tuşuna basıldığında oyundan çıkmak için:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    calisiyor = False
 
         # --- GÜNCELLEME (UPDATE) BÖLÜMÜ DÜZENLENDİ ---
         # Duvar ve yemlerin güncellenmeye ihtiyacı olmadığı için sadece hareketli nesneleri güncelliyoruz
