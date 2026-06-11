@@ -4,7 +4,7 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, baslangic_x, baslangic_y):
         super().__init__()
         
-        self.image = pygame.Surface((32, 32))
+        self.image = pygame.Surface((38, 38))
         self.image.fill((255, 255, 0)) 
         self.rect = self.image.get_rect()
         
