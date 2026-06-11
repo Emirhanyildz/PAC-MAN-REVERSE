@@ -128,6 +128,12 @@ def main():
             print("Tebrikler Oyuncu! Tüm hayaletleri avladın ve oyunu kazandın.")
             calisiyor = False  # Döngüyü kır ve programı sonlandır
 
+        # --- YENİ EKLENEN KISIM: KAYBETME KONTROLÜ ---
+        # 2. Kaybetme Kontrolü (Hayaletler tüm yemleri bitirirse)
+        if len(yem_grubu) == 0:
+            print("GAME OVER! Hayaletler tüm yemleri yedi ve haritayı temizledi.")
+            calisiyor = False  # Döngüyü kır ve programı sonlandır
+
     pygame.quit()
     sys.exit()
 
