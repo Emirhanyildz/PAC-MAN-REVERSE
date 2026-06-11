@@ -97,15 +97,12 @@ class Hayalet(pygame.sprite.Sprite):
             delta_y = oyuncu_satir - bulundugu_satir
             mesafe = abs(delta_x) + abs(delta_y)
 
-            # Görüş Eşikleri Artırıldı
-            tehlike_esigi = 6
-            if (self.yon_x > 0 and delta_x > 0) or (self.yon_x < 0 and delta_x < 0) or \
-               (self.yon_y > 0 and delta_y > 0) or (self.yon_y < 0 and delta_y < 0):
-                tehlike_esigi = 10
+            # --- YENİ SNEAKY GÖRÜŞ SİSTEMİ (Line of Sight) ---
+            gordumu = self.gorus_acisi_acik_mi(harita, bulundugu_satir, bulundugu_sutun, oyuncu_satir, oyuncu_sutun)
 
-            if mesafe <= tehlike_esigi:
+            if gordumu:
                 self.kacis_modu = True
-                self.hafizadaki_hedef = (oyuncu_satir, oyuncu_sutun)
+                self.hafizadaki_hedef = (oyuncu_satir, oyuncu_sutun) # Son gördüğü yeri hafızaya kazı
                 self.panik_sayaci = self.MAX_PANIK
 
             hedef_yon = None
@@ -174,6 +171,39 @@ class Hayalet(pygame.sprite.Sprite):
         yonler = [(0, 1, self.hiz, 0), (0, -1, -self.hiz, 0), (1, 0, 0, self.hiz), (-1, 0, 0, -self.hiz)]
         ters_x, ters_y = -self.yon_x, -self.yon_y
         olasi_hamleler = []
+    def gorus_acisi_acik_mi(self, harita, g_satir, g_sutun, o_satir, o_sutun):
+        # 1. Düz bir hat üzerinde miyiz? (Aynı satır veya aynı sütun)
+        if g_satir != o_satir and g_sutun != o_sutun:
+            return False # Çaprazda kalıyorsa duvar arkası veya kör nokta sayılır
+
+        # 2. Mesafe 6 kareden uzaksa ufuk çizgisini göremez
+        mesafe = abs(g_satir - o_satir) + abs(g_sutun - o_sutun)
+        if mesafe > 6:
+            return False
+            
+        # 3. Aynı satırdaysak, aradaki sütunları (kareleri) tarayıp duvar var mı diye bak
+        if g_satir == o_satir:
+            min_sutun = min(g_sutun, o_sutun)
+            max_sutun = max(g_sutun, o_sutun)
+            for s in range(min_sutun + 1, max_sutun):
+                if harita[g_satir][s] == 1:
+                    return False # Arada duvar var, görüş kesildi!
+                    
+        # 4. Aynı sütundaysak, aradaki satırları tarayıp duvar var mı diye bak
+        else:
+            min_satir = min(g_satir, o_satir)
+            max_satir = max(g_satir, o_satir)
+            for s in range(min_satir + 1, max_satir):
+                if harita[s][g_sutun] == 1:
+                    return False # Arada duvar var, görüş kesildi!
+
+        # 5. Görüş Yönü Kontrolü: Sadece baktığı yönü görebilir (Arkasını göremez)
+        if self.yon_x > 0 and o_sutun < g_sutun: return False # Sağa giderken solu göremez
+        if self.yon_x < 0 and o_sutun > g_sutun: return False # Sola giderken sağı göremez
+        if self.yon_y > 0 and o_satir < g_satir: return False # Aşağı giderken yukarıyı göremez
+        if self.yon_y < 0 and o_satir > g_satir: return False # Yukarı giderken aşağıyı göremez
+
+        return True # Eğer hiçbir engele takılmadıysa, oyuncu net bir şekilde görülmüştür!
         
         for d_satir, d_sutun, y_x, y_y in yonler:
             yeni_satir, yeni_sutun = g_satir + d_satir, g_sutun + d_sutun
