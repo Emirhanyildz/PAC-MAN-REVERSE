@@ -101,6 +101,11 @@ class Hayalet(pygame.sprite.Sprite):
             gordumu = self.gorus_acisi_acik_mi(harita, bulundugu_satir, bulundugu_sutun, oyuncu_satir, oyuncu_sutun)
 
             if gordumu:
+                # KRİTİK KONTROL: Eğer hayalet zaten panikte DEĞİLSE (Seni İLK kez görüyorsa)
+                if not self.kacis_modu:
+                    if ses_yoneticisi:
+                        ses_yoneticisi.fark_etme_cal()  # Sesi sadece 1 kere tetikle
+                
                 self.kacis_modu = True
                 self.hafizadaki_hedef = (oyuncu_satir, oyuncu_sutun) # Son gördüğü yeri hafızaya kazı
                 self.panik_sayaci = self.MAX_PANIK
