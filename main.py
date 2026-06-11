@@ -3,6 +3,7 @@ import pygame
 from ghost import Hayalet
 import sys
 from player import Player  # Player sınıfını içeri aktar
+from ses_yoneticisi import SesYoneticisi  
 
 pygame.init()
 
@@ -88,6 +89,8 @@ pacman_baslangic_y = 22 * TILE_SIZE
 pacman = Player(pacman_baslangic_x, pacman_baslangic_y)
 tum_spriteler.add(pacman)
 
+# --- SES YÖNETİCİSİNİ BURADA BAŞLATIYORUZ ---
+ses_yoneticisi = SesYoneticisi()
 
 def main():
     calisiyor = True
@@ -106,10 +109,10 @@ def main():
         # Duvar ve yemlerin güncellenmeye ihtiyacı olmadığı için sadece hareketli nesneleri güncelliyoruz
         
         # 1. Pac-Man'i Güncelle
-        pacman.update(duvar_grubu, yem_grubu, hayalet_grubu, seviye_haritasi, pacman)
+        pacman.update(duvar_grubu, yem_grubu, hayalet_grubu, seviye_haritasi, pacman, ses_yoneticisi)
         
         # 2. Hayaletleri Güncelle (Hayaletler de muhtemelen aynı parametrelere ihtiyaç duyuyor)
-        hayalet_grubu.update(duvar_grubu, yem_grubu, hayalet_grubu, seviye_haritasi, pacman)
+        hayalet_grubu.update(duvar_grubu, yem_grubu, hayalet_grubu, seviye_haritasi, pacman, ses_yoneticisi)
         # ---------------------------------------------
         
         ekran.fill((0, 0, 0)) 
