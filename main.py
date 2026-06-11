@@ -120,6 +120,20 @@ def main():
         # ÇİZİM (DRAW)
         tum_spriteler.draw(ekran)
 
+        # --- YENİ: PANİK ÜNLEM İŞARETİ ÇİZİMİ ---
+        for hayalet in hayalet_grubu:
+            if hayalet.kacis_modu:
+                # Ünlemin X ekseninde karakterin tam ortasına hizalanması
+                unlem_x = hayalet.rect.x + (TILE_SIZE // 2) - 3
+                # Ünlemin Y ekseninde hayaletin kafasının biraz üstünde başlaması
+                unlem_y = hayalet.rect.y - 22
+
+                # Üstteki uzun çubuk (Sarı renk: 255, 255, 0)
+                pygame.draw.rect(ekran, (255, 255, 0), (unlem_x, unlem_y, 6, 12))
+                # Alttaki küçük nokta (Sarı renk)
+                pygame.draw.rect(ekran, (255, 255, 0), (unlem_x, unlem_y + 16, 6, 6))
+        # ----------------------------------------
+
         pygame.display.flip()
         saat.tick(FPS)
         
