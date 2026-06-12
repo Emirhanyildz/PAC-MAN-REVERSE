@@ -21,6 +21,20 @@ class Player(pygame.sprite.Sprite):
     # update metoduna ses_yoneticisi parametresi eklendi
     def update(self, duvarlar, yemler, hayaletler, harita, oyuncu=None, ses_yoneticisi=None):
         # ---------------- HAYALET AVLAMA ----------------
+        # --- PORTAL / IŞINLANMA MEKANİĞİ ---
+        # Ekran genişliğimiz 1920 olduğu için sınırlarımız 0 ve 1920
+        
+        # Karakter sağdan tamamen çıkarsa (rect.left > 1920), onu sola at
+        if self.rect.left > 1920:
+            self.rect.right = 0
+            
+        # Karakter soldan tamamen çıkarsa (rect.right < 0), onu sağa at
+        elif self.rect.right < 0:
+            self.rect.left = 1920
+        # ----------------------------------
+        
+        
+        
         avlanan_hayaletler = pygame.sprite.spritecollide(self, hayaletler, True)
         if avlanan_hayaletler:
             print("Av başarılı! Bir hayalet yok edildi.")
