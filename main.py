@@ -28,9 +28,11 @@ PORTAL_RENK_1 = (0, 255, 255)
 PORTAL_RENK_2 = (255, 0, 255)
 TUNEL_SATIR_NO = 13
 
-# --- MUTLAK DOSYA YOLU AYARI (Skorların güvenle kaydedilmesi için) ---
+# --- MUTLAK DOSYA YOLU AYARI ---
 KLASOR_YOLU = os.path.dirname(os.path.abspath(__file__))
-SKOR_DOSYASI = os.path.join(KLASOR_YOLU, "skorlar.json")
+# Dosya adını olası bir sistem kilidinden kurtarmak için güncelledik:
+SKOR_DOSYASI = os.path.join(KLASOR_YOLU, "oyuncu_skorlari.json") 
+# ------------------------------
 
 # =====================================================================
 # SINIFLAR (SPRITES)
@@ -140,7 +142,23 @@ def skor_kaydet(isim, yeni_skor):
                         if isinstance(s, dict) and "skor" in s and "isim" in s:
                             skorlar.append(s)
         except Exception as e:
-            print(f"Skor okuma uyarisi: {e} (Dosya temizleniyor)")
+            print(f"Skor okuma uyarisi: {e} (Temizleniyor)")
+
+    skorlar.append({"isim": isim, "skor": yeni_skor})
+    skorlar.sort(key=lambda x: x["skor"], reverse=True) 
+    skorlar = skorlar[:5]      
+    
+    try:
+        with open(SKOR_DOSYASI, 'w', encoding='utf-8') as dosya_yaz:
+            json.dump(skorlar, dosya_yaz, indent=4)
+            
+            # --- ZORUNLU DİSKE YAZMA (Sessiz hataları engeller) ---
+            dosya_yaz.flush() # Veriyi RAM tamponundan dışarı it
+            os.fsync(dosya_yaz.fileno()) # Windows'u diske yazmaya zorla
+            
+        print(f"SKOR BASARIYLA DISKE YAZILDI -> {SKOR_DOSYASI}")
+    except Exception as e:
+        print(f"KRITIK HATA! Skor kaydedilemedi: {e}")
 
     skorlar.append({"isim": isim, "skor": yeni_skor})
     skorlar.sort(key=lambda x: x["skor"], reverse=True) 
