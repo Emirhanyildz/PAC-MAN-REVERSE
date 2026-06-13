@@ -144,6 +144,7 @@ def skor_kaydet(isim, yeni_skor):
         except Exception as e:
             print(f"Skor okuma uyarisi: {e} (Temizleniyor)")
 
+    # Skor listeye SADECE BİR KERE ekleniyor
     skorlar.append({"isim": isim, "skor": yeni_skor})
     skorlar.sort(key=lambda x: x["skor"], reverse=True) 
     skorlar = skorlar[:5]      
@@ -152,9 +153,9 @@ def skor_kaydet(isim, yeni_skor):
         with open(SKOR_DOSYASI, 'w', encoding='utf-8') as dosya_yaz:
             json.dump(skorlar, dosya_yaz, indent=4)
             
-            # --- ZORUNLU DİSKE YAZMA (Sessiz hataları engeller) ---
-            dosya_yaz.flush() # Veriyi RAM tamponundan dışarı it
-            os.fsync(dosya_yaz.fileno()) # Windows'u diske yazmaya zorla
+            # --- ZORUNLU DİSKE YAZMA ---
+            dosya_yaz.flush() 
+            os.fsync(dosya_yaz.fileno()) 
             
         print(f"SKOR BASARIYLA DISKE YAZILDI -> {SKOR_DOSYASI}")
     except Exception as e:
