@@ -56,7 +56,11 @@ class Hayalet(pygame.sprite.Sprite):
         elif self.kisilik == "Turuncu": return (25, 1)
         return (1, 1)
 
-    def update(self, duvarlar, yemler, hayaletler, harita, oyuncu, ses_yoneticisi=None):
+    def update(self, duvarlar, yemler, hayaletler, harita, oyuncu, ses_yoneticisi=None, aktif_ozellik=None):
+        # --- CHRONOS MEKANİĞİ: Zaman donmuşsa hayalet işlem yapamaz ---
+        if aktif_ozellik == "CHRONOS":
+            return
+
         yenen_yemler = pygame.sprite.spritecollide(self, yemler, True)
         
         if yenen_yemler and ses_yoneticisi:
@@ -92,10 +96,6 @@ class Hayalet(pygame.sprite.Sprite):
             
             oyuncu_sutun = max(0, min(oyuncu.rect.x // TILE_SIZE, max_sutun))
             oyuncu_satir = max(0, min(oyuncu.rect.y // TILE_SIZE, max_satir))
-
-            delta_x = oyuncu_sutun - bulundugu_sutun
-            delta_y = oyuncu_satir - bulundugu_satir
-            mesafe = abs(delta_x) + abs(delta_y)
 
             # --- YENİ SNEAKY GÖRÜŞ SİSTEMİ (Line of Sight) ---
             gordumu = self.gorus_acisi_acik_mi(harita, bulundugu_satir, bulundugu_sutun, oyuncu_satir, oyuncu_sutun)
@@ -172,10 +172,6 @@ class Hayalet(pygame.sprite.Sprite):
         if self.rect.y < 0: self.rect.y = 0
         elif self.rect.y > (len(harita) * TILE_SIZE) - self.rect.height: self.rect.y = (len(harita) * TILE_SIZE) - self.rect.height
 
-    def kacis_yonu_bul(self, harita, g_satir, g_sutun, tehlike_satir, tehlike_sutun):
-        yonler = [(0, 1, self.hiz, 0), (0, -1, -self.hiz, 0), (1, 0, 0, self.hiz), (-1, 0, 0, -self.hiz)]
-        ters_x, ters_y = -self.yon_x, -self.yon_y
-        olasi_hamleler = []
     def gorus_acisi_acik_mi(self, harita, g_satir, g_sutun, o_satir, o_sutun):
         # 1. Düz bir hat üzerinde miyiz? (Aynı satır veya aynı sütun)
         if g_satir != o_satir and g_sutun != o_sutun:
@@ -209,6 +205,11 @@ class Hayalet(pygame.sprite.Sprite):
         if self.yon_y < 0 and o_satir > g_satir: return False # Yukarı giderken aşağıyı göremez
 
         return True # Eğer hiçbir engele takılmadıysa, oyuncu net bir şekilde görülmüştür!
+
+    def kacis_yonu_bul(self, harita, g_satir, g_sutun, tehlike_satir, tehlike_sutun):
+        yonler = [(0, 1, self.hiz, 0), (0, -1, -self.hiz, 0), (1, 0, 0, self.hiz), (-1, 0, 0, -self.hiz)]
+        ters_x, ters_y = -self.yon_x, -self.yon_y
+        olasi_hamleler = []
         
         for d_satir, d_sutun, y_x, y_y in yonler:
             yeni_satir, yeni_sutun = g_satir + d_satir, g_sutun + d_sutun

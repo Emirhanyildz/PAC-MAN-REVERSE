@@ -4,13 +4,14 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, baslangic_x, baslangic_y):
         super().__init__()
         
+        # Orijinal boyut ve görsel yapı
         self.image = pygame.Surface((38, 38))
         self.image.fill((255, 255, 0)) 
         self.rect = self.image.get_rect()
         
         self.rect.x = baslangic_x
         self.rect.y = baslangic_y
-        self.hiz = 3
+        self.hiz = 4
         
         # SÜREKLİ HAREKET VE HAFIZA DEĞİŞKENLERİ
         self.yon_x = 0
@@ -18,23 +19,34 @@ class Player(pygame.sprite.Sprite):
         self.istenen_x = 0
         self.istenen_y = 0
 
-    # update metoduna ses_yoneticisi parametresi eklendi
-    def update(self, duvarlar, yemler, hayaletler, harita, oyuncu=None, ses_yoneticisi=None):
-        # ---------------- HAYALET AVLAMA ----------------
+    # update metoduna ses_yoneticisi ve aktif_ozellik parametreleri eklendi
+    def update(self, duvarlar, yemler, hayaletler, harita, oyuncu=None, ses_yoneticisi=None, aktif_ozellik=None):
         # --- PORTAL / IŞINLANMA MEKANİĞİ ---
         # Ekran genişliğimiz 1920 olduğu için sınırlarımız 0 ve 1920
         
         # Karakter sağdan tamamen çıkarsa (rect.left > 1920), onu sola at
         if self.rect.left > 1920:
             self.rect.right = 0
-            
         # Karakter soldan tamamen çıkarsa (rect.right < 0), onu sağa at
         elif self.rect.right < 0:
             self.rect.left = 1920
         # ----------------------------------
         
+        # --- AKTİF ÖZELLİĞE GÖRE HIZ AYARI ---
+        eski_hiz = self.hiz
+        if aktif_ozellik == "HIZ_ARTISI":
+            self.hiz = 8
+        else:
+            self.hiz = 4
+            
+        # Hız değiştiği an kilitlenmeyi önlemek için yön vektörlerini yeni hıza göre ölçekle
+        if self.hiz != eski_hiz:
+            if self.yon_x != 0: self.yon_x = (self.yon_x // abs(self.yon_x)) * self.hiz
+            if self.yon_y != 0: self.yon_y = (self.yon_y // abs(self.yon_y)) * self.hiz
+            if self.istenen_x != 0: self.istenen_x = (self.istenen_x // abs(self.istenen_x)) * self.hiz
+            if self.istenen_y != 0: self.istenen_y = (self.istenen_y // abs(self.istenen_y)) * self.hiz
         
-        
+        # ---------------- HAYALET AVLAMA ----------------
         avlanan_hayaletler = pygame.sprite.spritecollide(self, hayaletler, True)
         if avlanan_hayaletler:
             print("Av başarılı! Bir hayalet yok edildi.")
@@ -64,26 +76,30 @@ class Player(pygame.sprite.Sprite):
         test_rect.y += self.istenen_y
         
         carpisma_var_mi = False
-        for duvar in duvarlar:
-            if test_rect.colliderect(duvar.rect):
-                carpisma_var_mi = True
-                break
+        # Eğer PHASE (Duvar Geçme) aktif DEĞİLSE duvarları kontrol et
+        if aktif_ozellik != "PHASE":
+            for duvar in duvarlar:
+                if test_rect.colliderect(duvar.rect):
+                    carpisma_var_mi = True
+                    break
                 
-        # Eğer istenen yönde duvar YOKSA, karakteri o yöne döndür
+        # Eğer istenen yönde duvar YOKSA (veya içinden geçebiliyorsak), karakteri o yöne döndür
         if not carpisma_var_mi:
             self.yon_x = self.istenen_x
             self.yon_y = self.istenen_y
 
         # 3. FİZİK VE DUVAR SÜRTÜNMESİ (X Ekseni)
         self.rect.x += self.yon_x 
-        carpisilan_duvarlar = pygame.sprite.spritecollide(self, duvarlar, False)
-        for duvar in carpisilan_duvarlar:
-            if self.yon_x > 0: self.rect.right = duvar.rect.left 
-            elif self.yon_x < 0: self.rect.left = duvar.rect.right 
+        if aktif_ozellik != "PHASE":
+            carpisilan_duvarlar = pygame.sprite.spritecollide(self, duvarlar, False)
+            for duvar in carpisilan_duvarlar:
+                if self.yon_x > 0: self.rect.right = duvar.rect.left 
+                elif self.yon_x < 0: self.rect.left = duvar.rect.right 
 
         # 4. FİZİK VE DUVAR SÜRTÜNMESİ (Y Ekseni)
         self.rect.y += self.yon_y 
-        carpisilan_duvarlar = pygame.sprite.spritecollide(self, duvarlar, False)
-        for duvar in carpisilan_duvarlar:
-            if self.yon_y > 0: self.rect.bottom = duvar.rect.top
-            elif self.yon_y < 0: self.rect.top = duvar.rect.bottom
+        if aktif_ozellik != "PHASE":
+            carpisilan_duvarlar = pygame.sprite.spritecollide(self, duvarlar, False)
+            for duvar in carpisilan_duvarlar:
+                if self.yon_y > 0: self.rect.bottom = duvar.rect.top
+                elif self.yon_y < 0: self.rect.top = duvar.rect.bottom
