@@ -30,7 +30,6 @@ TUNEL_SATIR_NO = 13
 
 # --- MUTLAK DOSYA YOLU AYARI ---
 KLASOR_YOLU = os.path.dirname(os.path.abspath(__file__))
-# Dosya adını olası bir sistem kilidinden kurtarmak için güncelledik:
 SKOR_DOSYASI = os.path.join(KLASOR_YOLU, "oyuncu_skorlari.json") 
 # ------------------------------
 
@@ -77,7 +76,7 @@ class YemKalkaniJoker(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
         self.image = pygame.Surface((20, 20))
-        self.image.fill((0, 255, 0)) # Fark edilmesi için Parlak Yeşil
+        self.image.fill((0, 255, 0)) 
         self.rect = self.image.get_rect()
         self.rect.centerx = x + (TILE_SIZE // 2)
         self.rect.centery = y + (TILE_SIZE // 2)
@@ -92,7 +91,7 @@ yem_grubu = pygame.sprite.Group()
 hayalet_grubu = pygame.sprite.Group()
 ozellik_yemi_grubu = pygame.sprite.Group() 
 joker_grubu = pygame.sprite.Group() 
-sahte_bos_grup = pygame.sprite.Group() # Hayaletleri kandırmak için (Kalkan aktifken)
+sahte_bos_grup = pygame.sprite.Group() 
 
 ses_yoneticisi = SesYoneticisi()
 
@@ -144,7 +143,6 @@ def skor_kaydet(isim, yeni_skor):
         except Exception as e:
             print(f"Skor okuma uyarisi: {e} (Temizleniyor)")
 
-    # Skor listeye SADECE BİR KERE ekleniyor
     skorlar.append({"isim": isim, "skor": yeni_skor})
     skorlar.sort(key=lambda x: x["skor"], reverse=True) 
     skorlar = skorlar[:5]      
@@ -152,24 +150,11 @@ def skor_kaydet(isim, yeni_skor):
     try:
         with open(SKOR_DOSYASI, 'w', encoding='utf-8') as dosya_yaz:
             json.dump(skorlar, dosya_yaz, indent=4)
-            
-            # --- ZORUNLU DİSKE YAZMA ---
             dosya_yaz.flush() 
             os.fsync(dosya_yaz.fileno()) 
-            
         print(f"SKOR BASARIYLA DISKE YAZILDI -> {SKOR_DOSYASI}")
     except Exception as e:
         print(f"KRITIK HATA! Skor kaydedilemedi: {e}")
-
-    skorlar.append({"isim": isim, "skor": yeni_skor})
-    skorlar.sort(key=lambda x: x["skor"], reverse=True) 
-    skorlar = skorlar[:5]      
-    
-    try:
-        with open(SKOR_DOSYASI, 'w', encoding='utf-8') as dosya_yaz:
-            json.dump(skorlar, dosya_yaz, indent=4)
-    except Exception as e:
-        print(f"Skor kaydedilemedi: {e}")
 
 def skor_tablosu_goster():
     skorlar = []
@@ -244,7 +229,6 @@ def seviye_yukle(seviye_no, pacman_nesnesi):
             elif kutu_degeri == 0:
                 bos_yollar_listesi.append((x_koordinati, y_koordinati))
                 
-                # %2 Şansla Özel Güç Yemi, değilse normal Yem
                 if random.random() < 0.02: 
                     secilen_buff = random.choice(buff_turleri)
                     yeni_buff = OzellikYemi(x_koordinati + 12, y_koordinati + 12, secilen_buff)
@@ -260,7 +244,6 @@ def seviye_yukle(seviye_no, pacman_nesnesi):
                 hayalet_grubu.add(yeni_hayalet)
                 tum_spriteler.add(yeni_hayalet)
 
-    # Dinamik Pac-Man Başlangıç Noktası (Senin versiyonundaki en güvenli yöntem)
     max_satir = len(seviye_haritasi)
     max_sutun = len(seviye_haritasi[0])
     merkez_sutun = max_sutun // 2
@@ -281,7 +264,7 @@ def seviye_yukle(seviye_no, pacman_nesnesi):
         if baslangic_bulundu:
             break
             
-    if not baslangic_bulundu: # B planı
+    if not baslangic_bulundu: 
         pacman_nesnesi.rect.x = 24 * TILE_SIZE
         pacman_nesnesi.rect.y = 22 * TILE_SIZE
 
@@ -317,14 +300,95 @@ def draw_portal_visuals(screen):
     pygame.draw.circle(screen, guncel_renk, (GENISLIK - 15, tunel_y_piksel + 30), 4)
 
 # =====================================================================
+# ANA MENÜ SİSTEMİ
+# =====================================================================
+
+def ana_menu_ekrani():
+    menu_calisiyor = True
+    
+    resim_yolu = os.path.join(KLASOR_YOLU, "gorseller/ekranlar", "ana_menu.png")
+    try:
+        # Resmi bozmamak için olduğu gibi yüklüyoruz ve 1920x1080'e sündürüyoruz
+        bg_resmi = pygame.image.load(resim_yolu).convert()
+        bg_resmi = pygame.transform.scale(bg_resmi, (GENISLIK, YUKSEKLIK))
+    except FileNotFoundError:
+        bg_resmi = pygame.Surface((GENISLIK, YUKSEKLIK))
+        bg_resmi.fill((20, 20, 30))
+        print(f"Uyarı: '{resim_yolu}' bulunamadı. Lütfen ana_menu.png dosyasını klasöre ekleyin.")
+
+    # --- RESME GÖRE KESİN HİTBOX (TIKLAMA ALANI) HESAPLAMALARI ---
+    # Butonlar X ekseninde 720. pikselden başlıyor ve 480px genişliğinde
+    # Y ekseninde ise sırasıyla 540, 660, 780 ve 900 piksellerinden başlıyor.
+    buton_x = 720
+    buton_genislik = 480
+    buton_yukseklik = 90
+    
+    btn_oyna_rect = pygame.Rect(buton_x, 540, buton_genislik, buton_yukseklik)
+    btn_puan_rect = pygame.Rect(buton_x, 660, buton_genislik, buton_yukseklik)
+    btn_ayarlar_rect = pygame.Rect(buton_x, 780, buton_genislik, buton_yukseklik)
+    btn_cikis_rect = pygame.Rect(buton_x, 900, buton_genislik, buton_yukseklik)
+
+    # Üzerine gelindiğinde (Hover) belli olması için şeffaf bir parlama yüzeyi
+    vurgu_yuzeyi = pygame.Surface((buton_genislik, buton_yukseklik), pygame.SRCALPHA)
+    vurgu_yuzeyi.fill((255, 255, 255, 40)) # Alpha 40: %15 civarı opaklıkta beyaz
+
+    while menu_calisiyor:
+        fare_pos = pygame.mouse.get_pos()
+        fare_tiklandi = False
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    fare_tiklandi = True
+
+        # 1. Ana resmi tamamen orijinalliğiyle ekrana bas
+        ekran.blit(bg_resmi, (0, 0))
+
+        # 2. Görünmez Hitbox (Tıklama) Kontrolleri
+        
+        # OYNA Butonu
+        if btn_oyna_rect.collidepoint(fare_pos):
+            ekran.blit(vurgu_yuzeyi, btn_oyna_rect.topleft) # Hafif parlat
+            if fare_tiklandi:
+                return # Menüden çık, ana oyunu başlat
+                
+        # PUAN TABLOSU Butonu
+        if btn_puan_rect.collidepoint(fare_pos):
+            ekran.blit(vurgu_yuzeyi, btn_puan_rect.topleft)
+            if fare_tiklandi:
+                skor_tablosu_goster() # Skor tablosu fonksiyonunu çağır
+                
+        # AYARLAR Butonu
+        if btn_ayarlar_rect.collidepoint(fare_pos):
+            ekran.blit(vurgu_yuzeyi, btn_ayarlar_rect.topleft)
+            if fare_tiklandi:
+                print("Ayarlar menüsü yakında eklenecek!")
+                
+        # ÇIKIŞ Butonu
+        if btn_cikis_rect.collidepoint(fare_pos):
+            ekran.blit(vurgu_yuzeyi, btn_cikis_rect.topleft)
+            if fare_tiklandi:
+                pygame.quit()
+                sys.exit()
+
+        pygame.display.flip()
+        saat.tick(FPS)
+
+# =====================================================================
 # ANA OYUN DÖNGÜSÜ
 # =====================================================================
 
 def main():
+    # --- OYUN BAŞLAMADAN ÖNCE MENÜYÜ ÇAĞIR ---
+    ana_menu_ekrani()
+    # ----------------------------------------
+    
     calisiyor = True
     su_anki_seviye = 1
     
-    # Senin Sistem: Can, Puan ve Süre Değişkenleri
     puan = 0
     can = su_anki_seviye
     kalan_sure = 180 
@@ -332,7 +396,6 @@ def main():
     
     pacman = Player(0, 0) 
     
-    # Takım Arkadaşı 1: Özellik/Buff Değişkenleri
     aktif_ozellik = None      
     ozellik_sayaci = 0        
 
@@ -344,7 +407,6 @@ def main():
         pygame.quit()
         sys.exit()
 
-    # Takım Arkadaşı 2: Joker & Kalkan Değişkenleri
     joker_sahnedemi = False
     son_joker_dogma_zamani = pygame.time.get_ticks()
     joker_dogma_suresi = 15000  
@@ -369,7 +431,7 @@ def main():
             frame_sayaci = 0
             if kalan_sure > 0:
                 kalan_sure -= 1
-                puan = max(0, puan - 10) # Her saniye 10 puan azalır
+                puan = max(0, puan - 10) 
 
         # --- JOKER ÇIKARMA (SPAWN) MANTIĞI ---
         if not joker_sahnedemi and (su_anki_zaman - son_joker_dogma_zamani > joker_dogma_suresi):
@@ -419,10 +481,8 @@ def main():
         # --- KARAKTER GÜNCELLEMELERİ ---
         onceki_hayalet_sayisi = len(hayalet_grubu)
 
-        # Karakter ve hayalet güncellemeleri (Buff değişkeni son parametre olarak gönderilir)
         pacman.update(duvar_grubu, yem_grubu, hayalet_grubu, anlik_harita, pacman, ses_yoneticisi, aktif_ozellik)
         
-        # Kalkan aktifse hayaletler yemleri görmezden gelir (sahte boş gruba odaklanırlar)
         hedef_yemler = sahte_bos_grup if kalkan_aktif else yem_grubu
         hayalet_grubu.update(duvar_grubu, hedef_yemler, hayalet_grubu, anlik_harita, pacman, ses_yoneticisi, aktif_ozellik)
         
@@ -446,7 +506,6 @@ def main():
         if kalkan_aktif:
             pygame.draw.circle(ekran, (0, 255, 0), pacman.rect.center, 25, 3)
 
-        # Üst Bilgi Barı Çizimi (Senin Tasarımın)
         puan_metni = kucuk_font.render(f"Puan: {puan}", True, (255, 255, 255))
         sure_metni = kucuk_font.render(f"Sure: {kalan_sure}", True, (255, 255, 255))
         can_metni = kucuk_font.render(f"Can: {can}", True, (255, 0, 0))
