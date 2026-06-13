@@ -41,6 +41,8 @@ class Yem(pygame.sprite.Sprite):
         self.rect.x = x
         self.rect.y = y
 
+
+
 # Grupları burada tanımlıyoruz
 tum_spriteler = pygame.sprite.Group()
 duvar_grubu = pygame.sprite.Group()
@@ -181,6 +183,7 @@ def main():
         if len(yem_grubu) == 0:
             print("GAME OVER! Hayaletler tüm yemleri yedi ve haritayı temizledi.")
             calisiyor = False 
+
 
     pygame.quit()
     sys.exit()
